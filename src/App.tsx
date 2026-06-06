@@ -6,10 +6,14 @@ import PricingPage from './pages/PricingPage';
 import AboutPage from './pages/AboutPage';
 import EditorPage from './pages/EditorPage';
 import AuthPage from './pages/AuthPage';
+import { ToastContainer, useToast } from './components/ui/Toast';
 
 export default function App() {
+  const { toasts, dismissToast } = useToast();
+
   return (
     <BrowserRouter>
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <div className="min-h-screen flex flex-col bg-bg-base">
         <Navbar />
         <main className="flex-1">

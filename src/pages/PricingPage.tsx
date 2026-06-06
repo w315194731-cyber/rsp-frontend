@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import PricingCard from '../components/features/PricingCard';
 import BottomCTA from '../components/features/BottomCTA';
+import { useToast } from '../components/ui/Toast';
 
 const plans = [
   {
@@ -36,7 +38,8 @@ const plans = [
     badge: 'Most Popular',
     highlighted: true,
     ctaLabel: 'Start Pro',
-    disabled: true,
+    ctaVariant: 'primary' as const,
+    plan: 'pro' as const,
   },
   {
     name: 'Lifetime',
@@ -58,7 +61,7 @@ const plans = [
     badge: 'Limited',
     ctaLabel: 'Claim Lifetime Offer',
     ctaVariant: 'secondary' as const,
-    disabled: true,
+    plan: 'lifetime' as const,
   },
 ];
 
@@ -86,6 +89,43 @@ const faqs = [
 ];
 
 export default function PricingPage() {
+  const [loading, setLoading] = useState<string | null>(null);
+  const { addToast } = useToast();
+
+  const handleCheckout = async (plan: string) => {
+    if (plan === 'free') return;
+
+    setLoading(plan);
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL ?? 'https://api.rsp.example.com';
+      const response = await fetch(`${apiUrl}/api/subscription/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ plan }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ message: 'Request failed' }));
+        throw new Error(err.message || 'Failed to create checkout');
+      }
+
+      const { checkout_url } = await response.json();
+
+      // Redirect to Creem checkout
+      window.location.href = checkout_url;
+    } catch (err) {
+      console.error('Checkout error:', err);
+      addToast({
+        variant: 'error',
+        title: 'Checkout failed',
+        message: err instanceof Error ? err.message : 'Something went wrong. Please try again.',
+      });
+      setLoading(null);
+    }
+  };
+
   return (
     <div>
       {/* Hero */}
@@ -105,7 +145,12 @@ export default function PricingPage() {
         <div className="w-full max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
             {plans.map((plan) => (
-              <PricingCard key={plan.name} {...plan} />
+              <PricingCard
+                key={plan.name}
+                {...plan}
+                onCheckout={plan.plan ? () => handleCheckout(plan.plan!) : undefined}
+                disabled={loading !== null || (plan.plan && loading === plan.plan)}
+              />
             ))}
           </div>
         </div>
